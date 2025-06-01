@@ -1,0 +1,19 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "dev.ignis.enhancedpotatocannon.mixin",
+  "compatibilityLevel": "JAVA_8",
+  "refmap": "enhancedpotatocannon.refmap.json",
+  "server": [
+    "PotatoCannonMixin",
+    "PotatoProjectileAddonMixin"
+  ],
+  "client": [
+    "PotatoCannonRenderMixin",
+    "PotatoCannonMixin",
+    "PotatoProjectileAddonMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

@@ -3,6 +3,7 @@ package dev.ignis.enhancedpotatocannon.mixin;
 import com.simibubi.create.content.equipment.potatoCannon.PotatoCannonProjectileType;
 import com.simibubi.create.content.equipment.potatoCannon.PotatoProjectileEntity;
 import com.simibubi.create.foundation.damageTypes.CreateDamageSources;
+import dev.ignis.enhancedpotatocannon.Config;
 import dev.ignis.enhancedpotatocannon.EnhancedPotatoCannon;
 import dev.ignis.enhancedpotatocannon.content.potatoinfo.ExplosionHitInfo;
 import dev.ignis.enhancedpotatocannon.content.potatoinfo.PotatoEffectInfo;
@@ -17,12 +18,14 @@ import net.minecraft.network.protocol.game.ClientboundExplodePacket;
 import net.minecraft.network.protocol.game.ClientboundSoundPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.projectile.AbstractHurtingProjectile;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ClipContext;
@@ -50,6 +53,9 @@ public class PotatoProjectileAddonMixin extends AbstractHurtingProjectile{
 
     @Shadow(remap = false)
     protected PotatoCannonProjectileType type;
+
+    @Shadow(remap = false)
+    protected float additionalDamageMult;
 
     @Unique
     ExplosionStrengthInfo _$explodeStrength = null;
@@ -84,10 +90,41 @@ public class PotatoProjectileAddonMixin extends AbstractHurtingProjectile{
 
     @Inject(
             method = "onHitEntity(Lnet/minecraft/world/phys/EntityHitResult;)V",
+            at = @At(value = "INVOKE", target = "Lcom/simibubi/create/content/equipment/potatoCannon/PotatoProjectileEntity;getProjectileType()Lcom/simibubi/create/content/equipment/potatoCannon/PotatoCannonProjectileType;",ordinal = -1),
+            locals = LocalCapture.CAPTURE_FAILHARD
+    )
+    private void onCalcDamage(EntityHitResult ray, CallbackInfo ci, Vec3 hit, Entity target){
+        Entity targetEntity = ray.getEntity();
+
+        if((!targetEntity.level().isClientSide) && (targetEntity instanceof Monster || targetEntity instanceof ServerPlayer)){
+            Vec3 startPos = this.getPosition(1);
+            Vec3 vecPos = this.getDeltaMovement().normalize();
+            Vec3 targetEyePos = targetEntity.getEyePosition();
+            Vec3 toTarget = targetEyePos.subtract(startPos);
+            double hitHeight;
+            double projection = toTarget.dot(vecPos);
+            if (projection < 0.0) {
+                hitHeight = startPos.y;
+            }else{
+                Vec3 closestPoint = startPos.add(vecPos.scale(projection));
+                hitHeight = closestPoint.y;
+            }
+            if(hitHeight>(targetEyePos.y-0.25)){
+                additionalDamageMult *= (float) Config.headshotMultiplier;
+                _$playSound((ServerLevel) targetEntity.level(),targetEyePos,SoundEvents.SLIME_JUMP,1f,0.5f,16);
+                if(this.getOwner() instanceof ServerPlayer owner){
+                    _$playSound(owner,owner.position(),SoundEvents.TRIDENT_HIT,0.5f,0.2f);
+                }
+            }
+        }
+    }
+
+    @Inject(
+            method = "onHitEntity(Lnet/minecraft/world/phys/EntityHitResult;)V",
             at = @At(value = "INVOKE", target = "Lcom/simibubi/create/content/equipment/potatoCannon/PotatoProjectileEntity;pop(Lnet/minecraft/world/phys/Vec3;)V", ordinal = -1),
             locals = LocalCapture.CAPTURE_FAILSOFT
     )
-    private void addAfterHitEntityEffect(EntityHitResult ray, CallbackInfo ci){
+    private void addAfterHitEntityEffect(EntityHitResult ray, CallbackInfo ci, Vec3 hit){
         Entity targetEntity = ray.getEntity();
 
         if(!_$isSpecial(_$itemId)) return;
@@ -346,6 +383,25 @@ public class PotatoProjectileAddonMixin extends AbstractHurtingProjectile{
         double reflectedZ = velocity.z - 2 * projectionFactor * normal.z;
 
         return new Vec3(reflectedX, reflectedY, reflectedZ);
+    }
+
+    @Unique
+    private static void _$playSound(ServerLevel level, Vec3 pos, SoundEvent soundEvent,float volume,float pitch,double radius){
+        var holder = ForgeRegistries.SOUND_EVENTS.getHolder(soundEvent).get();
+        for (ServerPlayer player : level.players()) {
+            if(player.position().distanceTo(pos)<radius){
+                ClientboundSoundPacket soundPacket = new ClientboundSoundPacket(holder, SoundSource.PLAYERS, pos.x, pos.y, pos.z, volume, pitch, 0);
+                player.connection.send(soundPacket);
+            }
+        }
+    }
+
+    @Unique
+    private static void _$playSound(ServerPlayer player,Vec3 pos, SoundEvent soundEvent,float volume,float pitch){
+        ServerLevel level = player.serverLevel();
+        var holder = ForgeRegistries.SOUND_EVENTS.getHolder(soundEvent).get();
+        ClientboundSoundPacket soundPacket = new ClientboundSoundPacket(holder, SoundSource.PLAYERS, pos.x, pos.y, pos.z, volume, pitch, 0);
+        player.connection.send(soundPacket);
     }
 }
 

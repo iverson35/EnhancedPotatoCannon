@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import dev.ignis.enhancedpotatocannon.EnhancedPotatoCannon;
+import dev.ignis.enhancedpotatocannon.content.potatoinfo.BallisticInfo;
 import dev.ignis.enhancedpotatocannon.content.potatoinfo.PotatoEffectInfo;
 import dev.ignis.enhancedpotatocannon.content.potatoinfo.ExplosionStrengthInfo;
 import dev.ignis.enhancedpotatocannon.content.potatoinfo.ReflectContext;
@@ -30,12 +31,14 @@ public class PotatoProjectileAddonManager {
     private static Hashtable<String, ExplosionStrengthInfo> strengthInfoHashtable = new Hashtable<>();
     private static Hashtable<String, List<PotatoEffectInfo>> effectInfoHashtable = new Hashtable<>();
     private static Hashtable<String, ReflectContext> reflectHashtable = new Hashtable<>();
+    private static Hashtable<String, BallisticInfo> ballisticHashtable = new Hashtable<>();
 
     private static void clear(){
         specialEffectPotatoes = new HashSet<>();
         strengthInfoHashtable = new Hashtable<>();
         effectInfoHashtable = new Hashtable<>();
         reflectHashtable = new Hashtable<>();
+        ballisticHashtable = new Hashtable<>();
     }
 
     private static void insertDataFromJson(JsonObject jsonObject){
@@ -45,13 +48,18 @@ public class PotatoProjectileAddonManager {
             ReflectContext reflectContext = new ReflectContext();
             List<JsonElement> itemIdsJson = jsonObject.get("items").getAsJsonArray().asList();
             List<String> itemIds = new LinkedList<>();
+            BallisticInfo ballisticInfo = new BallisticInfo();
+
             for(var id:itemIdsJson){
                 itemIds.add(id.getAsString());
+                EnhancedPotatoCannon.LOGGER.debug("Reading: "+id.getAsString());
             }
 
             strengthInfo.readFromJson(jsonObject);
 
             reflectContext.readFromJson(jsonObject);
+
+            ballisticInfo.readFromJson(jsonObject);
 
             if(jsonObject.asMap().containsKey("effects")){
                 List<JsonElement> effectsJson = jsonObject.getAsJsonArray("effects").asList();
@@ -62,15 +70,19 @@ public class PotatoProjectileAddonManager {
                 }
             }
 
-            if(!strengthInfo.isDefault()||!effectInfos.isEmpty()||reflectContext.doReflect){
+
+            if(!(strengthInfo.isDefault()&&effectInfos.isEmpty()&&!reflectContext.doReflect&&ballisticInfo.isDefault())){
                 for(var id:itemIds){
                     specialEffectPotatoes.add(id);
                     strengthInfoHashtable.put(id,strengthInfo);
                     effectInfoHashtable.put(id,effectInfos);
                     reflectHashtable.put(id,reflectContext);
-                    EnhancedPotatoCannon.LOGGER.debug("Loaded data: "+id);
+                    ballisticHashtable.put(id,ballisticInfo);
+                    EnhancedPotatoCannon.LOGGER.debug("Is modified potato type: "+id);
                 }
             }
+
+            EnhancedPotatoCannon.LOGGER.debug("Loaded all data");
 
         }catch (Exception e){
             EnhancedPotatoCannon.LOGGER.error("Cannot load data: "+e.getMessage());
@@ -94,6 +106,10 @@ public class PotatoProjectileAddonManager {
         if(reflectHashtable.containsKey(id)){
             return new ReflectContext(reflectHashtable.get(id));
         }else return new ReflectContext();
+    }
+
+    public static BallisticInfo getBallisticInfo(String id){
+        return ballisticHashtable.get(id);
     }
 
     public static class ReloadListener extends SimpleJsonResourceReloadListener {

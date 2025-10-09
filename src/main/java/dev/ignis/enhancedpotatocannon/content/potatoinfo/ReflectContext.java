@@ -25,7 +25,7 @@ public class ReflectContext {
             if(map.containsKey("speed_decay")||map.containsKey("max_reflect")){
                 doReflect = true;
                 maxReflect = map.containsKey("max_reflect")?map.get("max_reflect").getAsInt():10;
-                speedDecay = map.containsKey("reflect_decay")?map.get("reflect_decay").getAsFloat():0.5f;
+                speedDecay = map.containsKey("speed_decay")?map.get("speed_decay").getAsFloat():0.5f;
             }else{
                 doReflect = false;
             }
@@ -33,5 +33,14 @@ public class ReflectContext {
             EnhancedPotatoCannon.LOGGER.error("Cannot load reflect data: "+e.getMessage());
             throw new JsonParseException("Cannot load reflect data");
         }
+    }
+
+    @Override
+    public String toString() {
+        return "ReflectContext{" +
+                "doReflect=" + doReflect +
+                ", maxReflect=" + maxReflect +
+                ", speedDecay=" + speedDecay +
+                '}';
     }
 }

@@ -5,13 +5,13 @@
   "compatibilityLevel": "JAVA_8",
   "refmap": "enhancedpotatocannon.refmap.json",
   "server": [
-    "PotatoCannonMixin",
-    "PotatoProjectileAddonMixin"
   ],
   "client": [
-    "PotatoCannonRenderMixin",
-    "PotatoCannonMixin",
-    "PotatoProjectileAddonMixin"
+    "PotatoCannonRenderMixin"
+  ],
+  "mixins": [
+    "PotatoProjectileAddonMixin",
+    "PotatoCannonMixin"
   ],
   "injectors": {
     "defaultRequire": 1

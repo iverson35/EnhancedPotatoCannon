@@ -20,22 +20,16 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.effect.MobEffect;
-import net.minecraft.world.effect.MobEffectCategory;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.monster.Monster;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.AbstractHurtingProjectile;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.*;
-import net.minecraft.world.scores.PlayerTeam;
-import net.minecraft.world.scores.Scoreboard;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -52,7 +46,7 @@ import java.util.List;
 import java.util.Objects;
 
 @Mixin(PotatoProjectileEntity.class)
-public abstract class PotatoProjectileAddonMixin extends AbstractHurtingProjectile{
+public abstract class PotatoProjectileEntityMixin extends AbstractHurtingProjectile{
     @Unique
     String _$itemId = "minecraft:air";
 
@@ -79,7 +73,7 @@ public abstract class PotatoProjectileAddonMixin extends AbstractHurtingProjecti
     @Unique
     Vec3 _$shootFromPos = Vec3.ZERO;
 
-    protected PotatoProjectileAddonMixin(EntityType<? extends AbstractHurtingProjectile> p_36833_, Level p_36834_) {
+    protected PotatoProjectileEntityMixin(EntityType<? extends AbstractHurtingProjectile> p_36833_, Level p_36834_) {
         super(p_36833_, p_36834_);
     }
 
@@ -136,6 +130,10 @@ public abstract class PotatoProjectileAddonMixin extends AbstractHurtingProjecti
             //EnhancedPotatoCannon.LOGGER.debug("Ratio: "+_$getRangeDamageRatio(this.getPosition(1))+" for distance: "+_$shootFromPos.distanceTo(this.getPosition(1)));
         }
 
+        if(CommonUtil.isFriendly(getOwner(),ray.getEntity())){
+            additionalDamageMult = 0;
+        }
+
     }
 
     @Inject(
@@ -150,7 +148,7 @@ public abstract class PotatoProjectileAddonMixin extends AbstractHurtingProjecti
 
         if(_$effects!=null&& !_$effects.isEmpty()) _$addEffects(this.getOwner(),_$effects,1,targetEntity);
 
-        if(this.level().isClientSide && _$explodeStrength.affectRange>0) _$causeExplosion(ray,null);
+        if(!this.level().isClientSide && _$explodeStrength.affectRange>0) _$causeExplosion(ray,null);
     }
 
     @Inject(
@@ -161,12 +159,12 @@ public abstract class PotatoProjectileAddonMixin extends AbstractHurtingProjecti
     private void beforeHitBlock(BlockHitResult ray, CallbackInfo ci){
         if(_$reflect == null){
             _$reflect = PotatoProjectileAddonManager.getReflectContext(_$itemId);
-            EnhancedPotatoCannon.LOGGER.error("Reflect is null");
+            //EnhancedPotatoCannon.LOGGER.error("Reflect is null");
         }
-        EnhancedPotatoCannon.LOGGER.debug("RC: "+(this.level().isClientSide?"Client-":"Server-")+_$reflect.toString());
+        //EnhancedPotatoCannon.LOGGER.debug("RC: "+(this.level().isClientSide?"Client-":"Server-")+_$reflect.toString());
 
 
-        if(this.level().isClientSide()){
+        if(this.level().isClientSide() && _$reflect.doReflect){
             //EnhancedPotatoCannon.LOGGER.debug("Canceling client kill");
             //EnhancedPotatoCannon.LOGGER.debug(_$reflect==null?"RIN":_$reflect.toString());
             ci.cancel();
@@ -211,7 +209,7 @@ public abstract class PotatoProjectileAddonMixin extends AbstractHurtingProjecti
             at = @At("TAIL")
     )
     private void onReadAdditionalSaveData(CompoundTag nbt, CallbackInfo ci) {
-        EnhancedPotatoCannon.LOGGER.debug("GET: "+nbt.toString());
+        //EnhancedPotatoCannon.LOGGER.debug("GET: "+nbt.toString());
         if(nbt.contains("DoReflect")) {
             if(_$reflect == null) _$reflect = PotatoProjectileAddonManager.getReflectContext(_$itemId);
             _$reflect.doReflect = nbt.getBoolean("DoReflect");
@@ -244,7 +242,7 @@ public abstract class PotatoProjectileAddonMixin extends AbstractHurtingProjecti
             nbt.putFloat("DecreaseRateOutsideRange",ballisticCopy.decreaseRateOutsideRange);
             nbt.putBoolean("HitSelf",ballisticCopy.hitSelf);
         }
-        EnhancedPotatoCannon.LOGGER.debug("SEND: "+nbt.toString());
+        //EnhancedPotatoCannon.LOGGER.debug("SEND: "+nbt.toString());
     }
 
     @Inject(
@@ -256,7 +254,7 @@ public abstract class PotatoProjectileAddonMixin extends AbstractHurtingProjecti
 
         if(!_$isSpecial(_$itemId)) return;
 
-        if(this.level().isClientSide && _$explodeStrength.affectRange>0) _$causeExplosion(null,ray);
+        if(!this.level().isClientSide && _$explodeStrength.affectRange>0) _$causeExplosion(null,ray);
     }
 
     @Inject(
@@ -281,7 +279,7 @@ public abstract class PotatoProjectileAddonMixin extends AbstractHurtingProjecti
                 this.onHitEntity(new EntityHitResult(this.getOwner(),this.getOwner().getPosition(1).add(0,0.1f,0)));
             }
             if(_$getRangeDamageRatio(this.getPosition(1))<=0){
-                if(this.level().isClientSide && _$explodeStrength.affectRange>0) _$createExplosion(this.getOwner(),new ExplosionHitInfo(this.level(),this.getPosition(1),null,this),_$explodeStrength,_$effects);
+                if(!this.level().isClientSide && _$explodeStrength.affectRange>0) _$createExplosion(this.getOwner(),new ExplosionHitInfo(this.level(),this.getPosition(1),null,this),_$explodeStrength,_$effects);
                 this.kill();
             }
         }

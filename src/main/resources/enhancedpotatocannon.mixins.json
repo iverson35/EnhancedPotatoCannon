@@ -10,8 +10,8 @@
     "PotatoCannonRenderMixin"
   ],
   "mixins": [
-    "PotatoProjectileAddonMixin",
-    "PotatoCannonMixin"
+    "PotatoProjectileEntityMixin",
+    "ShootableGadgetItemMethodsMixin"
   ],
   "injectors": {
     "defaultRequire": 1

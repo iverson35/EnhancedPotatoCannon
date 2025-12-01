@@ -22,11 +22,18 @@ public class Config
     private static final ForgeConfigSpec.DoubleValue HEADSHOT_MULTIPLIER = BUILDER
             .comment("Headshot damage multiplier")
             .defineInRange("headshotMultiplier", 2f, 1, 64);
+
+    private static final ForgeConfigSpec.DoubleValue TELESCOPE_FOV = BUILDER
+            .comment("FOV while using telescope")
+            .defineInRange("telescopeFOV", 0.5f, 0.01f, 1f);
+
     static final ForgeConfigSpec SPEC = BUILDER.build();
     public static double headshotMultiplier;
+    public static double telescopeFOV;
 
     @SubscribeEvent
     public static void onLoad(final ModConfigEvent event){
         headshotMultiplier = HEADSHOT_MULTIPLIER.get();
+        telescopeFOV = TELESCOPE_FOV.get();
     }
 }

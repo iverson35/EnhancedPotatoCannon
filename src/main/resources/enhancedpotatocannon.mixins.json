@@ -11,7 +11,8 @@
   ],
   "mixins": [
     "PotatoProjectileEntityMixin",
-    "ShootableGadgetItemMethodsMixin"
+    "ShootableGadgetItemMethodsMixin",
+    "SpyglassItemMixin"
   ],
   "injectors": {
     "defaultRequire": 1

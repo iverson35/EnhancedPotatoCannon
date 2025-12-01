@@ -25,6 +25,7 @@ public class EnhancedPotatoCannon {
 
         // 注册生命周期事件到 Mod 事件总线
         modEventBus.addListener(this::commonSetup);
+        modEventBus.addListener(this::clientSetup);
 
         // 注册游戏事件到 Forge 事件总线
         MinecraftForge.EVENT_BUS.addListener(this::addReloadListeners);
